@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 
-export default function RegisterForm() {
+export default async function RegisterForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
@@ -22,18 +22,13 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Basic client-side validation
     if (form.password !== form.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
 
     try {
-      // Placeholder: replace with your real API or Supabase sign-up
       console.log("Registering:", form);
-      // After success - use router for smooth transition
-      // We'll simulate a successful registration with a slight delay
       setTimeout(() => {
         router.push('/login');
       }, 500);
@@ -42,101 +37,111 @@ export default function RegisterForm() {
     }
   };
 
+  const res = await fetch('http://localhost:3000/api/register', {  // change to your backend server port
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: form.name,
+    email: form.email,
+    password: form.password
+  })
+});
+
   return (
     <PageTransition>
       <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="bg-[#2f3136]/80 backdrop-blur-sm p-8 rounded-2xl shadow-xl w-full max-w-md">
-      <h2 className="text-3xl font-bold text-white mb-6 text-center">Create Account</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm font-bold text-white">
-            Full Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="name"
-            placeholder="Enter your full name"
-            value={form.name}
-            onChange={handleChange}
-            className="bg-[#202225] text-white placeholder-gray-400 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm font-bold text-white">
-            Email <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            name="email"
-            placeholder="Enter your email"
-            value={form.email}
-            onChange={handleChange}
-            className="bg-[#202225] text-white placeholder-gray-400 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            required
-          />
-        </div>
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm font-bold text-white">
-            Password <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              placeholder="Enter your password"
-              value={form.password}
-              onChange={handleChange}
-              className="bg-[#202225] w-full text-white placeholder-gray-400 p-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-3 text-white"
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </button>
-          </div>
-        </div>
-        <div className="flex flex-col space-y-1">
-          <label className="text-sm font-bold text-white">
-            Confirm Password <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="confirmPassword"
-              placeholder="Confirm your password"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="bg-[#202225] w-full text-white placeholder-gray-400 p-3 pr-12 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((prev) => !prev)}
-              className="absolute right-3 top-3 text-white"
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
-            </button>
-          </div>
-        </div>
+        <div className="bg-[#2f3136]/80 backdrop-blur-sm p-6 rounded-xl shadow-lg w-full max-w-sm">
+          <h2 className="text-2xl font-semibold text-white mb-4 text-center">Create Account</h2>
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-3">
+            {/* Full Name */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm text-white font-medium">Full Name<span className="text-red-500">*</span></label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Enter your name"
+                className="bg-[#202225] text-white p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
 
-        <button
-          type="submit"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition duration-300"
-        >
-          Register
-        </button>
-      </form>
-      <p className="text-sm text-gray-400 mt-4 text-center">
-        Already have an account?{' '}
-        <Link href="/login" className="text-indigo-400 hover:underline">
-          Login
-        </Link>
-      </p>
-      </div>
+            {/* Email */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm text-white font-medium">Email<span className="text-red-500">*</span></label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="Enter your email"
+                className="bg-[#202225] text-white p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm text-white font-medium">Password<span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  className="bg-[#202225] text-white p-2 pr-10 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="absolute right-2 top-2 text-white"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm text-white font-medium">Confirm Password<span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm your password"
+                  className="bg-[#202225] text-white p-2 pr-10 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="absolute right-2 top-2 text-white"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 rounded-md transition duration-300"
+            >
+              Register
+            </button>
+          </form>
+
+          <p className="text-xs text-gray-400 mt-3 text-center">
+            Already have an account?{' '}
+            <Link href="/login" className="text-indigo-400 hover:underline">
+              Login
+            </Link>
+          </p>
+        </div>
       </div>
     </PageTransition>
   );
