@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Eye, EyeOff } from 'lucide-react';
 import PageTransition from '@/components/PageTransition';
 
-export default async function RegisterForm() {
+export default function RegisterForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({
@@ -22,30 +22,36 @@ export default async function RegisterForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (form.password !== form.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
 
     try {
-      console.log("Registering:", form);
-      setTimeout(() => {
-        router.push('/login');
-      }, 500);
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'Registration failed');
+        return;
+      }
+
+      console.log("Registered successfully");
+      setTimeout(() => router.push('/login'), 500);
     } catch (err) {
       console.error("Registration error:", err);
+      alert("Something went wrong. Try again.");
     }
   };
-
-  const res = await fetch('http://localhost:3000/api/register', {  // change to your backend server port
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    name: form.name,
-    email: form.email,
-    password: form.password
-  })
-});
 
   return (
     <PageTransition>
@@ -53,6 +59,7 @@ export default async function RegisterForm() {
         <div className="bg-[#2f3136]/80 backdrop-blur-sm p-6 rounded-xl shadow-lg w-full max-w-sm">
           <h2 className="text-2xl font-semibold text-white mb-4 text-center">Create Account</h2>
           <form onSubmit={handleSubmit} className="flex flex-col space-y-3">
+
             {/* Full Name */}
             <div className="flex flex-col space-y-1">
               <label className="text-sm text-white font-medium">Full Name<span className="text-red-500">*</span></label>
