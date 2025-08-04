@@ -3,19 +3,21 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["public", "auth"]
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public"]         // Use only "public" unless you NEED "auth"
 }
 
 model Profile {
-
-  id         String   @id @db.Uuid
-  email      String?  @unique
-  full_name  String?
-  avatar_url String?
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id           String   @id @db.Uuid
+  auth_user_id String?  @unique
+  email        String   @unique      // Removed @db.Citext as extension is not enabled
+  password     String   // bcrypt hash only, NEVER plaintext
+  full_name    String?
+  avatar_url   String?
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 
   // Relationships
   workspaces       Workspace[]       @relation("CreatedWorkspaces")
@@ -30,18 +32,19 @@ model Profile {
   TaskAttachment   TaskAttachment[]
 
   @@index([email])
+  @@index([auth_user_id])
   @@map("profiles")
   @@schema("public")
 }
 
 model Workspace {
-
   id          String   @id @default(uuid()) @db.Uuid
   name        String
   description String?
   created_by  String?  @db.Uuid
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
+  deleted_at  DateTime?
 
   // Relationships
   creator  Profile?          @relation("CreatedWorkspaces", fields: [created_by], references: [id], onDelete: SetNull)
@@ -49,13 +52,14 @@ model Workspace {
   projects Project[]
   events   Event[]
 
+  @@unique([name, created_by])
   @@index([created_by])
+  @@index([deleted_at])
   @@map("workspaces")
   @@schema("public")
 }
 
 model WorkspaceMember {
-
   id           String   @id @default(uuid()) @db.Uuid
   workspace_id String   @db.Uuid
   user_id      String   @db.Uuid
@@ -74,7 +78,6 @@ model WorkspaceMember {
 }
 
 model Project {
-
   id           String        @id @default(uuid()) @db.Uuid
   workspace_id String        @db.Uuid
   name         String
@@ -92,6 +95,7 @@ model Project {
   tasks     Task[]
   events    Event[]
 
+  @@unique([workspace_id, name])
   @@index([workspace_id])
   @@index([created_by])
   @@index([status])
@@ -100,7 +104,6 @@ model Project {
 }
 
 model Task {
-
   id             String       @id @default(uuid()) @db.Uuid
   project_id     String       @db.Uuid
   title          String
@@ -111,6 +114,7 @@ model Task {
   created_by     String?      @db.Uuid
   due_date       DateTime?
   parent_task_id String?      @db.Uuid
+  position       Int          @default(0)
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
 
@@ -118,7 +122,7 @@ model Task {
   project      Project          @relation(fields: [project_id], references: [id], onDelete: Cascade)
   assignedUser Profile?         @relation("AssignedTasks", fields: [assigned_to], references: [id], onDelete: SetNull)
   creator      Profile?         @relation("CreatedTasks", fields: [created_by], references: [id], onDelete: SetNull)
-  parentTask   Task?            @relation("Subtasks", fields: [parent_task_id], references: [id], onDelete: SetNull)
+  parentTask   Task?            @relation("Subtasks", fields: [parent_task_id], references: [id], onDelete: Cascade)
   subtasks     Task[]           @relation("Subtasks")
   comments     TaskComment[]
   attachments  TaskAttachment[]
@@ -130,12 +134,13 @@ model Task {
   @@index([priority])
   @@index([due_date])
   @@index([parent_task_id])
+  @@index([project_id, status, priority])
+  @@index([position])
   @@map("tasks")
   @@schema("public")
 }
 
 model Event {
-
   id           String    @id @default(uuid()) @db.Uuid
   workspace_id String    @db.Uuid
   project_id   String?   @db.Uuid
@@ -160,12 +165,12 @@ model Event {
   @@index([created_by])
   @@index([start_time])
   @@index([event_type])
+  @@index([workspace_id, start_time, end_time])
   @@map("events")
   @@schema("public")
 }
 
 model EventAttendee {
-
   id       String           @id @default(uuid()) @db.Uuid
   event_id String           @db.Uuid
   user_id  String           @db.Uuid
@@ -183,7 +188,6 @@ model EventAttendee {
 }
 
 model TaskComment {
-
   id         String   @id @default(uuid()) @db.Uuid
   task_id    String   @db.Uuid
   user_id    String   @db.Uuid
@@ -202,12 +206,11 @@ model TaskComment {
 }
 
 model TaskAttachment {
-
   id          String   @id @default(uuid()) @db.Uuid
   task_id     String   @db.Uuid
   file_name   String
   file_url    String
-  file_size   Int?
+  file_size   BigInt? @db.BigInt
   mime_type   String?
   uploaded_by String?  @db.Uuid
   created_at  DateTime @default(now())
@@ -223,7 +226,6 @@ model TaskAttachment {
 }
 
 model Notification {
-
   id         String           @id @default(uuid()) @db.Uuid
   user_id    String           @db.Uuid
   title      String
@@ -239,13 +241,13 @@ model Notification {
   @@index([user_id])
   @@index([read])
   @@index([created_at])
+  @@index([user_id, read])
   @@map("notifications")
   @@schema("public")
 }
 
 // Enums
 enum Role {
-
   SUPER_ADMIN     @map("super_admin")
   WORKSPACE_ADMIN @map("workspace_admin")
   ORGANIZER       @map("organizer")
@@ -256,7 +258,6 @@ enum Role {
 }
 
 enum ProjectStatus {
-
   ACTIVE    @map("active")
   COMPLETED @map("completed")
   ARCHIVED  @map("archived")
@@ -266,17 +267,16 @@ enum ProjectStatus {
 }
 
 enum TaskStatus {
-
   TODO        @map("todo")
   IN_PROGRESS @map("in_progress")
   REVIEW      @map("review")
   COMPLETED   @map("completed")
+  BLOCKED     @map("blocked")
 
   @@schema("public")
 }
 
 enum TaskPriority {
-
   LOW    @map("low")
   MEDIUM @map("medium")
   HIGH   @map("high")
@@ -286,7 +286,6 @@ enum TaskPriority {
 }
 
 enum EventType {
-
   MEETING   @map("meeting")
   DEADLINE  @map("deadline")
   MILESTONE @map("milestone")
@@ -297,7 +296,6 @@ enum EventType {
 }
 
 enum AttendanceStatus {
-
   PENDING  @map("pending")
   ACCEPTED @map("accepted")
   DECLINED @map("declined")
@@ -307,7 +305,6 @@ enum AttendanceStatus {
 }
 
 enum NotificationType {
-
   INFO    @map("info")
   WARNING @map("warning")
   ERROR   @map("error")

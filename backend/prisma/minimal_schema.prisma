@@ -1,0 +1,15 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// This is a minimal schema for testing database connection
+model Test {
+  id    Int     @id @default(autoincrement())
+  name  String?
+}

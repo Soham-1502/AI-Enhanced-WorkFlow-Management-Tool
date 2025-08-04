@@ -1,121 +1,170 @@
-'use client'
+"use client"
 
-import { Eye, EyeOff } from "lucide-react";
-import { useState , useEffect} from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import PageTransition from "@/components/PageTransition";
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
+import { Eye, EyeOff } from "lucide-react"
+import AuthLayout from "@/components/auth-layout"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({
-    email: '',
-    password: ''
-  });
+  const router = useRouter()
+  const [showPw, setShowPw] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [form, setForm] = useState({ email: "", password: "", remember: false })
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const onChange = e =>
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Login attempt:', form);
-    setTimeout(() => {
-      router.push('/');
-    }, 500);
-  };
+  const onSubmit = async (e) => {
+    e.preventDefault()
+    setError("")
+    setIsLoading(true)
+    
+    try {
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+        }),
+      })
 
-  // For Login Page
-const [subtitle, setSubtitle] = useState("");
+      const data = await response.json()
 
-  useEffect(() => {
-    const messages = [
-      "We’re excited to see you again!",
-      "Let’s get things done.",
-      "Sign in to continue organizing like a pro.",
-      "Enter your hub of collaboration.",
-      "Glad to have you back on board!"
-    ];
-    const random = Math.floor(Math.random() * messages.length);
-    setSubtitle(messages[random]);
-  }, []);;
+      if (!response.ok) {
+        throw new Error(data.error || "Login failed")
+      }
 
+      // Store token in localStorage or cookies
+      localStorage.setItem("token", data.token)
+      localStorage.setItem("user", JSON.stringify(data.user))
+
+      // Redirect to dashboard
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("Login error:", error)
+      setError(error.message || "An error occurred during login")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
-    <PageTransition>
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="bg-[#2f3136]/80 backdrop-blur-sm p-6 rounded-xl shadow-lg w-full max-w-sm">
-          <div className="text-center mb-4">
-            <h1 className="text-2xl font-semibold text-white mb-1">Welcome Back</h1>
-            {subtitle && (
-  <p className="mb-5 text-center text-gray-300">{subtitle}</p>
-)}
-
+    <AuthLayout
+      title="Welcome Back"
+      subtitle="Sign in to your dashboard"
+      leftHeading="AI-Enhanced Workflow Management"
+      leftParagraph="Streamline projects, automate scheduling, and boost productivity."
+    >
+      {/* ---------- form ---------- */}
+      <form onSubmit={onSubmit} className="space-y-4">
+        {error && (
+          <div className="p-3 rounded-md bg-red-50 text-red-500 text-sm">
+            {error}
           </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col space-y-3">
-            <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-white">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="Enter your email"
-                className="bg-[#202225] p-2 text-sm text-white rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-white">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="Enter your password"
-                  className="bg-[#202225] p-2 pr-10 text-sm text-white rounded-md w-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(prev => !prev)}
-                  className="absolute right-2 top-2 text-white"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <Link href="/forgot" className="text-xs text-indigo-400 hover:underline">
-                Forgot Password?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 rounded-md transition duration-300"
-            >
-              Login
-            </button>
-          </form>
-
-          <p className="text-xs text-gray-400 mt-3 text-center">
-            Need an account?{' '}
-            <Link href="/register" className="text-indigo-400 hover:underline">
-              Register
-            </Link>
-          </p>
+        )}
+        
+        {/* email */}
+        <div className="space-y-1">
+          <Label htmlFor="email">Email address</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="jane@company.com"
+            value={form.email}
+            onChange={onChange}
+            required
+            className="h-11"
+          />
         </div>
+
+        {/* password */}
+        <div className="space-y-1">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPw ? "text" : "password"}
+              placeholder="••••••••"
+              value={form.password}
+              onChange={onChange}
+              required
+              className="h-11 pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(!showPw)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+            >
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* remember + link */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="remember"
+              checked={form.remember}
+              onCheckedChange={val => setForm(p => ({ ...p, remember: val }))}
+            />
+            <Label htmlFor="remember" className="text-sm">
+              Remember me
+            </Label>
+          </div>
+          <Button variant="link" className="px-0 text-sm">
+            Forgot password?
+          </Button>
+        </div>
+
+        {/* submit */}
+        <Button
+          type="submit"
+          className="w-full h-11 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
+          disabled={isLoading}
+        >
+          {isLoading ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
+
+      {/* divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <Separator />
+        </div>
+        <span className="relative bg-background px-2 text-xs uppercase text-muted-foreground">
+          or continue with
+        </span>
       </div>
-    </PageTransition>
-  );
+
+      {/* social */}
+      <div className="grid grid-cols-2 gap-4">
+        <Button variant="outline" className="h-11">
+          Google
+        </Button>
+        <Button variant="outline" className="h-11">
+          Microsoft
+        </Button>
+      </div>
+
+      {/* link to register */}
+      <p className="text-center text-sm">
+        New here?{" "}
+        <Button variant="link" className="px-0">
+          <a href="/register">Create an account</a>
+        </Button>
+      </p>
+    </AuthLayout>
+  )
 }
